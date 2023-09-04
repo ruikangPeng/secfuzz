@@ -15,7 +15,7 @@ from Crypto.Hash import *
 from scapy.all import *
 
 #------------------------------------------------------------
-# This class enumerates the different payload types
+# 此类枚举不同的负载类型
 #------------------------------------------------------------
 class PD_TYPE:
    SA = 1
@@ -32,8 +32,7 @@ class PD_TYPE:
    Header = -1
 
 #------------------------------------------------------------
-# This class holds information about the current IKE
-# session
+# 此类保存有关当前 IKE 会话的信息
 #------------------------------------------------------------
 class Fuzz_session:
   fuzz = None
@@ -48,45 +47,27 @@ class Fuzz_session:
 
 
 #------------------------------------------------------------
-# Global variables
+# 全局变量
 #------------------------------------------------------------
-# prob_listi     - assigns a probability of applying the different
-#                  fuzz categories
-# fuzz_session   - keeps information about the current IKE session
-# ip             - the IP of the local machine
-# opp_ip         - the IP of the remote machine (under test)
-# log_file       - stores fuzzing information
-# iface          - the interface of the local machine (e.g. eth0)
-# fuzz_mode      - boolean, specifies whether packets are fuzzed or not
-# pluto_log_file - path to the pluto log file
-# pluto_log_fd   - the file descriptor of the pluto log file
-# running        - is the fuzzer running?
-# ike_port       - the ike port (to which the packets are sent by default
-# dest_port      - the ike port on which the remote machine is listening
-# lock1, lock2   - semaphores used to synchronize the thread snooping 
-#                  for packets (tcpdump) and the main fuzzer thread 
-#                  sending the packets
-#------------------------------------------------------------
-prob_list = [('payload', 0.1), ('field', 0.8), ('packet', 0.1)]
-fuzz_session = Fuzz_session()
-ip = None
-opp_ip = None
-log_file = None
-log_dir = None
-iface = None
-fuzz_mode = False
-pluto_log_file= "/home/adminuser/fuzzing/pluto.log"
-pluto_log_fd = None
-running = True
-ike_port = 500
-dest_port = 501
-lock1 = threading.Semaphore(0)
-lock2 = threading.Semaphore(1)
+prob_list = [('payload', 0.1), ('field', 0.8), ('packet', 0.1)]   ## 指定应用不同模糊类别的概率
+fuzz_session = Fuzz_session()                                     ## 保留有关当前 IKE 会话的信息
+ip = None                                                         ## 本地计算机的 IP
+opp_ip = None                                                     ## 远程机器的 IP(SUT)
+log_file = None                                                   ## 存储 log 模糊信息
+log_dir = None                                                    ## 存储 log 文件的路径
+iface = None                                                      ## 本地机器的接口(例如 eth0)
+fuzz_mode = False                                                 ## boolean类型，指定数据包是否模糊
+pluto_log_file= "/home/adminuser/fuzzing/pluto.log"               ## pluto 日志文件的路径
+pluto_log_fd = None                                               ## pluto 日志文件的文件描述符
+running = True                                                    ## 模糊器是否在运行
+ike_port = 500                                                    ## ike 端口(默认情况下将数据包发送到该端口)
+dest_port = 501                                                   ## 远程机器正在侦听的 ike 端口
+lock1 = threading.Semaphore(0)                                    ## 用于同步线程窥探数据包(tcpdump)和发送数据包的主模糊线程的信号量
+lock2 = threading.Semaphore(1)                                    ## 用于同步线程窥探数据包(tcpdump)和发送数据包的主模糊线程的信号量
 
 
 #------------------------------------------------------------
-# This function logs all output to a file, if no file is
-# specified, it prints to standard output
+# 此函数将所有输出记录到一个文件中，如果未指定文件，则打印到标准输出
 #------------------------------------------------------------
 def log(msg):
    log_msg = '[' + str(datetime.datetime.now()) + '] ' + msg
@@ -98,8 +79,7 @@ def log(msg):
 
 
 #------------------------------------------------------------
-# This function cleans temporary files and stop the fuzzer 
-# upon Ctrl+c event
+# 此函数用于清理临时文件并在 Ctrl+c 事件时停止模糊器
 #------------------------------------------------------------
 def signal_handler(signal, frame):
    running = False
@@ -110,31 +90,28 @@ def signal_handler(signal, frame):
 
 
 #------------------------------------------------------------
-# This function should be run in a separate thread. It
-# runs tcpdump to capture packets into pcap format. It
-# synchronizes with the fuzzer so that a packet is sent
-# only after tcpdump is listening for the next packet.
+# 此函数应在单独的线程中运行。它运行 tcpdump 将数据包捕获为 pcap 格式。
+# 它与模糊器同步，以便只有在 tcpdump 侦听下一个数据包之后才发送数据包。
 #------------------------------------------------------------
 def start_tcpdump():
    log('Tcpdump running')
    pkt_count = 1
    while running:
-      # wait until the fuzzer sends the packet that was just captured
+      # 等待模糊器发送刚刚捕获的数据包
       lock2.acquire()
       pcap_file = log_dir + 'pkt_' + str(pkt_count) + '.pcap'
       os.system('tcpdump -i ' + iface + ' dst ' + opp_ip + ' and dst port ' + str(ike_port) + ' -c 1 -w ' + pcap_file + ' &')
       if pkt_count > 1:
-         # busy wait until tcpdump is up and running
+         # 忙于等待 tcpdump 启动并运行
          while int(os.popen('sudo ps x | grep "tcpdump -i ' + iface + '" | wc -l').read().rstrip()) < 1:
             pass
-         # tcpdump is listening, safe to send the packet
+         # tcpdump 正在侦听，可以安全地发送数据包
          lock1.release()
       pkt_count += 1
 
 
 #------------------------------------------------------------
-# This function returns a random well-formed packet (that
-# was captured from previous sessions of the protocol)
+# 此函数返回一个格式良好的随机数据包(该数据包是从协议的以前会话中捕获的)
 #------------------------------------------------------------
 def get_random_pkt():
    num_pcap_pkts = int(os.popen('ls *.pcap | wc -l').read().rstrip())
@@ -146,8 +123,7 @@ def get_random_pkt():
    
 
 #------------------------------------------------------------
-# This function reads a pcap file and returns a packet
-# object.
+# 此函数读取一个 pcap 文件并返回一个数据包对象。
 #------------------------------------------------------------
 def read_pcap(pcap_file):
    while not( os.path.isfile(pcap_file) and os.path.getsize(pcap_file) > 0 ):
@@ -160,9 +136,8 @@ def read_pcap(pcap_file):
 
 
 #------------------------------------------------------------
-# This function rewrites the packet port to the dest port and deletes
-# the IP and UDP checksums, if the checksums do not match,
-# the OS might (and should) ignore the packets.
+# 此函数将数据包端口重写为 dest 端口，并删除 IP 和 UDP 校验和，
+# 如果校验和不匹配，操作系统可能(也应该)忽略数据包。
 #------------------------------------------------------------
 def rewrite_port(pkt):
    pkt[UDP].dport = dest_port
@@ -171,9 +146,9 @@ def rewrite_port(pkt):
 
 
 #------------------------------------------------------------
-# Chooses an item from a list defined as:
+# 从定义为的列表中选择一个：
 # [(item_1,prob_1), (item_2,prob_2),... ,(item_n,prob_n)]
-# where prob_i is the probability of choosing item_i
+# 其中 prob_i 是选择 item_i 的概率
 #------------------------------------------------------------
 def weighted_choice(items):
    weight_total = sum((item[1] for item in items))
@@ -186,16 +161,14 @@ def weighted_choice(items):
 
 
 #------------------------------------------------------------
-# When a new IKE session is detected, the fuzzer also starts
-# a new session, i.e. it will fuzz a message/payload during
-# that session
+# 当检测到一个新的 IKE 会话时，模糊器还会启动一个新会话，即在该会话期间模糊消息/负载
 #------------------------------------------------------------
 def init_new_session(pkt):
    global fuzz_session
    log('Starting a new session')
    fuzz_session = Fuzz_session()
    fuzz_session.fuzz = weighted_choice(prob_list) 
-   # choose a random packet to fuzz
+   # 选择一个随机数据包进行模糊处理
    fuzz_session.pkt_to_fuzz = random.randint(1,5)
    if fuzz_session.fuzz == 'payload':
       log('Prepare to fuzz a payload in packet ' + str(fuzz_session.pkt_to_fuzz))
@@ -208,7 +181,7 @@ def init_new_session(pkt):
 
 
 #------------------------------------------------------------
-# This function encrypts the packet
+# 此函数对数据包进行加密
 #------------------------------------------------------------
 def encrypt(pkt):
    log('Encrypting a packet')
@@ -224,8 +197,7 @@ def encrypt(pkt):
 
 
 #------------------------------------------------------------
-# This function reads the pluto log file and returns the
-# current encryption key
+# 此函数读取 pluto 日志文件并返回当前加密密钥
 #------------------------------------------------------------
 def get_key():
    pluto_log_reader()
@@ -240,7 +212,7 @@ def get_key():
 
 
 #------------------------------------------------------------
-# This function decrypts the packet
+# 此函数用于解密数据包
 #------------------------------------------------------------
 
    SA = 1
@@ -273,7 +245,7 @@ def decrypt(pkt):
    else:
       pkt[ISAKMP].payload = ISAKMP_payload_Hash(key.decrypt(pkt[ISAKMP].payload.load))
    log('Decrypted packet:\n' + pkt.command() )
-   # we assume the res field is not used and is set to 0, this allows us to check if the decryption was successful
+   # 我们假设 res 字段没有被使用，并且被设置为 0，这允许我们检查解密是否成功
    if pkt[ISAKMP].payload.res != 0:
       log('Decryption failed, probably the key was incorrect, this can happen if pluto has not written the latest key in its log file')
       pkt[ISAKMP].payload = ISAKMP_payload(next_payload=0)
@@ -281,13 +253,11 @@ def decrypt(pkt):
 
 
 #------------------------------------------------------------
-# This function monitors the pluto.log file and captures
-# when the encryption key is updated, it also keeps track
-# of the current encryption scheme used, IV for CBC, etc.
+# 此函数监视 pluto.log 文件并捕获加密密钥何时更新，它还跟踪当前使用的加密方案、CBC 的 IV 等。
 #------------------------------------------------------------
 def pluto_log_reader():
   global fuzz_session
-  # wait to make sure that pluto saved to pluto.log
+  # 等待以确保 pluto 已保存到 pluto.log
   time.sleep(0.1)
 
   line = pluto_log_fd.readline().rstrip()
@@ -321,7 +291,7 @@ def pluto_log_reader():
 
 
 #------------------------------------------------------------
-# This function repeats a payload in the packet
+# 此函数重复数据包中的有效载荷
 #------------------------------------------------------------
 def payload_repeat(pkt):
    cur_payload = pkt[ISAKMP]
@@ -339,7 +309,7 @@ def payload_repeat(pkt):
 
 
 #------------------------------------------------------------
-# This function removes a payload from the packet
+# 此函数从数据包中删除有效负载
 #------------------------------------------------------------
 def payload_remove(pkt):
    cur_payload = pkt[ISAKMP]
@@ -359,7 +329,7 @@ def payload_remove(pkt):
      cur_payload.underlayer.payload = eval(cur_payload.payload.command())
 
 #------------------------------------------------------------
-# This function inserts a random payload in the packet
+# 此函数在数据包中插入随机有效载荷
 #------------------------------------------------------------
 def payload_insert(pkt):
    cur_payload = pkt[ISAKMP]
@@ -383,7 +353,7 @@ def payload_insert(pkt):
 
 
 #------------------------------------------------------------
-# A map from payload fuzz type to payload fuzz function
+# 从有效载荷模糊类型到有效载荷模糊函数的映射
 #------------------------------------------------------------
 fuzz_payload_func = {}
 fuzz_payload_func['repeat'] = payload_repeat
@@ -393,7 +363,7 @@ fuzz_payload_func['insert'] = payload_insert
 
 
 #------------------------------------------------------------
-# This function fuzzes a payload
+# 此函数模糊一个有效载荷
 #------------------------------------------------------------
 def fuzz_payload(pkt):
    fuzz_type = random.choice( ['repeat', 'remove', 'insert'] )
@@ -413,18 +383,17 @@ def fuzz_payload(pkt):
 
 
 #------------------------------------------------------------
-# This function fuzzes a field
+# 此函数模糊一个字段
 #------------------------------------------------------------
 def fuzz_field(pkt):
    log('Fuzzig a field')
-   # Check if the packet is encrypted
+   # 检查数据包是否加密
    encrypt_pkt = False
    if pkt[ISAKMP].flags == 1L:
      decrypt(pkt)
      encrypt_pkt = True
 
-   # Check what payloads are contained in the packet and
-   # randomly choose one to fuzz a field in it
+   # 检查数据包中包含哪些有效载荷，并随机选择一个来模糊其中的字段
    cur_payload = pkt[ISAKMP]
    payloads = []
    payload_type = []
@@ -445,7 +414,7 @@ def fuzz_field(pkt):
 
 
 #------------------------------------------------------------
-# This function fuzzes a packet (sends a random packet)
+# 此函数模糊一个数据包(发送随机数据包)
 #------------------------------------------------------------
 def fuzz_packet(pkt):
    log('Fuzzing packet')
@@ -457,7 +426,7 @@ def fuzz_packet(pkt):
 
 
 #------------------------------------------------------------
-# Fuzz a packet
+# 模糊一个包
 #------------------------------------------------------------
 def fuzz_pkt(pkt):
    if fuzz_session.fuzz == 'payload':
@@ -469,8 +438,7 @@ def fuzz_pkt(pkt):
    
 
 #------------------------------------------------------------
-# This function processes each new packet and decides whether
-# we should fuzz it or not
+# 这个函数处理每个新的数据包，并决定我们是否应该模糊它
 #------------------------------------------------------------
 def process_pkt(pkt):
    global fuzz_session
@@ -480,7 +448,7 @@ def process_pkt(pkt):
 
 
 #------------------------------------------------------------
-# The main fuzzer function
+# 模糊器的主要函数
 #------------------------------------------------------------
 def start_fuzzer():
    global running, pluto_log_fd
@@ -498,7 +466,7 @@ def start_fuzzer():
          continue
       pkt_count = pkt_count + 1
       log('Received packet:\n' + pkt.command() + '\n')
-      # Detect if the packets belongs to a new IKE session
+      # 检测数据包是否属于新的 IKE 会话
       if fuzz_mode and pkt[ISAKMP].resp_cookie == '\x00\x00\x00\x00\x00\x00\x00\x00' and pkt[ISAKMP].init_cookie != fuzz_session.init_cookie:
          init_new_session(pkt)
       if fuzz_mode:
@@ -511,8 +479,7 @@ def start_fuzzer():
 
 
 #------------------------------------------------------------
-# The main function, reads the fuzzer arguments and starts
-# the fuzzer
+# 主函数，读取 fuzzer 参数并启动 fuzzer
 #------------------------------------------------------------
 def main():
    global ip, opp_ip, log_file, fuzz_mode, log_dir, iface, pluto_log_file, prob_list
@@ -573,7 +540,7 @@ def print_usage():
 
 
 #------------------------------------------------------------
-# The functions below fuzz fields
+# 模糊字段下面的函数
 #------------------------------------------------------------
 
 def rand_ByteEnumField():
@@ -619,7 +586,7 @@ def rand_IntField():
    return random.randint(0,5000)
 
 #------------------------------------------------------------
-# The functions below fuzz payloads
+# 模糊有效载荷下面的函数
 #------------------------------------------------------------
 
 def fuzz_SA(payload):
