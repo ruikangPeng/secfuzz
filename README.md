@@ -48,8 +48,8 @@ IUT 的行为可以使用动态分析工具进行监测，例如内存错误检�
 IV. 如何使用模糊测试仪
 ------------------------------
 模糊测试仪是一个 python 脚本，可以如下启动：
-```
-$python ike_fuzzer.py [options]
+```python
+python ike_fuzzer.py [options]
 ```
 - ```-i <ip>```：指定本地计算机的 IP 地址
 - ```-o <opposite ip>```：指定 IUT 的 IP 地址
