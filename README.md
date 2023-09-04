@@ -51,12 +51,12 @@ IV. 如何使用模糊测试仪
 ```
 $python ike_fuzzer.py [options]
 ```
-- ```-i <ip>```:指定本地计算机的 IP 地址
-- -o <opposite ip>        指定 IUT 的 IP 地址
-- -f                      在 fuzzing 模式下运行 fuzztester，如果没有设置该标志，则 fuzzer 只转发所有 Openswan 消息
-- -l <log file>           指定要记录信息的文件，如果未指定文件，则所有输出都将发送到标准输出
-- -e <iface>              指定用于向 IUT 发送消息的以太网接口的名称(例如 eth0)
-- -p <pluto log file>     设置 Openswan 日志文件的路径 
+- ```-i <ip>```：指定本地计算机的 IP 地址
+- ```-o <opposite ip>```：指定 IUT 的 IP 地址
+- ```-f```：在 fuzzing 模式下运行 fuzztester，如果没有设置该标志，则 fuzzer 只转发所有 Openswan 消息
+- ```-l <log file>```：指定要记录信息的文件，如果未指定文件，则所有输出都将发送到标准输出
+- ```-e <iface>```：指定用于向 IUT 发送消息的以太网接口的名称(例如 eth0)
+- ```-p <pluto log file>```：设置 Openswan 日志文件的路径 
 
 除 -f 和 -l 之外的所有选项都是必需的。模糊测试人员需要 root 权限。
 
