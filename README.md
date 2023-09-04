@@ -1,44 +1,35 @@
-I. WHAT DOES IT DO
+I. 它做什么
 ------------------
-The purpose of the IKE fuzz tester is to evaluate IKE implementations
-for vulnerabilities. The fuzz tester sends messages to the
-implementation under test (IUT), which in turn is tested for low-level
-vulnerabilities (e.g. memory errors) using a dynamic analysis tool.
-The sequence of messages sent to the IUT is randomly mutated using one
-of the fuzz operators described below.
+IKE 模糊测试仪的目的是评估 IKE 实现中的漏洞。
+模糊测试仪向被测实现（IUT）发送消息，然后使用动态分析工具对其进行低级别漏洞（例如内存错误）测试。
+发送到 IUT 的消息序列是使用下面描述的模糊运算符之一随机变异的。
 
 
-II. FUZZ OPERATORS
+II. 模糊算子
 ------------------
-The fuzz operators randomly mutate a sequence of messages, which is
-the input to the IUT. A protocol execution consists of a sequence of
-messages, a message consists of a list of payloads, and a payload
-consits of a set of fields.
+模糊运算符随机变异一系列消息，这些消息是 IUT 的输入。
+协议执行由一系列消息组成，消息由有效载荷列表组成，有效载荷由一组字段组成。
 
 1. Fuzzing a message
-   - send a random message: this operator inserts a well-formed message
-     in a valid sequence of messages.
+   - 发送一个随机消息：这个操作符在一个有效的消息序列中插入一个格式良好的消息。
 2. Fuzzing a payload
-   - remove a payload: a payload from the message is removed
-   - insert a payload: a random well-formed payload is inserted at a random
-     position in the list of payloads
-   - repeat a payload: a random payload is duplicated in the list of payloads
+   - 移除有效载荷：消息中的有效载荷被移除
+   - 插入有效载荷：在有效载荷列表中的随机位置插入一个随机形成的有效载荷
+   - 重复有效载荷：随机有效载荷在有效载荷列表中重复
 3. Fuzzing a field
    Fuzzing numerical fields:
-   - set to 0
-   - set to a random number
-   Fuzzing byte fields
-   - append a sequence of random bytes
-   - set to empty
-   - modify a random byte
-   - insert a string termination at a random position
+   - 设置为 0
+   - 设置为随机数模糊字节字段
+   - 附加一个随机字节序列
+   - 设置为空
+   - 修改随机字节
+   - 在随机位置插入字符串终止
    
 
-III. HOW DOES IT WORK
+III. 它是如何工作的
 ---------------------
-The figure below illustrates the experimental setup for using the fuzz
-tester. Openswan is a mature IPsec implementation, which is used to
-generate valid IKE message sequences. 
+下图说明了使用模糊测试仪的实验设置。
+Openswan 是一个成熟的 IPsec 实现，用于生成有效的 IKE 消息序列。 
 
 ```
     +--------+                         +--------+
@@ -51,77 +42,59 @@ write to |      \                  /
              read    +---------+
 ```
 
-The behavior of the IUT can be monitored using a dynamic analysis
-tool, e.g. memory error detector such as Valgrind's Memcheck.
+IUT 的行为可以使用动态分析工具进行监测，例如内存错误检测器，如 Valgrind 的 Memcheck。
 
 
-IV. HOW TO USE THE FUZZ TESTER
+IV. 如何使用模糊测试仪
 ------------------------------
-The fuzz tester is a python script and can be started as follows:
+模糊测试仪是一个 python 脚本，可以如下启动：
+```
 $python ike_fuzzer.py [options]
- -i <ip>                 specify the IP address of the local machine
- -o <opposite ip>        specify the IP address of the IUT
- -f                      run the fuzz tester in fuzzing mode, if this
-                         flag is not set, the fuzzer simply forwards
-                         all Openswan messages
- -l <log file>           specify a file to log information, if not
-                         file is specified, all output is send to
-                         standard output
- -e <iface>              specify the name of the ethernet interface
-                         used for sending messages to the IUT 
-                         (e.g. eth0)
- -p <pluto log file>     set the path to Openswan's log file 
+ -i <ip>                 指定本地计算机的 IP 地址
+ -o <opposite ip>        指定 IUT 的 IP 地址
+ -f                      在 fuzzing 模式下运行 fuzztester，如果没有设置该标志，则 fuzzer 只转发所有 Openswan 消息
+ -l <log file>           指定要记录信息的文件，如果未指定文件，则所有输出都将发送到标准输出
+ -e <iface>              指定用于向 IUT 发送消息的以太网接口的名称(例如 eth0)
+ -p <pluto log file>     设置 Openswan 日志文件的路径 
+```
 
-All options except -f and -l are mandatory. The fuzz tester needs 
-root privileges.
+除 -f 和 -l 之外的所有选项都是必需的。模糊测试人员需要 root 权限。
 
-When the fuzz tester is started, all messages sent by Openswan are
-intercepted and forwarded to the port on which the IUT listens for IKE
-messages. Openswan must be configured to output all debug information
-so that the fuzz tester can find the necessary encryption information
-from the log file. This can be done by setting plutodebug=all in
-ipsec.conf. The ipsec_confs directory contains a number of ipsec.conf
-configurations.
+当模糊测试仪启动时，Openswan 发送的所有消息都会被拦截并转发到 IUT 侦听 IKE 消息的端口。
+Openswan 必须配置为输出所有调试信息，以便模糊测试人员能够从日志文件中找到必要的加密信息。
+这可以通过在 ipsec.conf 中设置 pludebug＝all 来完成。ipsec_confs 目录包含许多 ipsec.conf 配置。
 
 
-V. SOFTWARE DEPENDENCIES
+V. 软件依赖
 ------------------------
-To use the fuzz tester you need the following software:
+要使用模糊测试仪，您需要以下软件：
 - Python 2.6+
-- Scapy (http://www.secdev.org/projects/scapy/) - Scapy is a powerful
-  interactive packet manipulation library for python.
-- Openswan 2.6.37 (http://openswan.org/) - Openswan is an IPsec
-  implementation for Linux. You need to configure how Openswan and the 
-  IUT authenticate to each other.
+- Scapy (http://www.secdev.org/projects/scapy/) - Scapy 是一个强大的 python 交互式数据包操作库。
+- Openswan 2.6.37 (http://openswan.org/) - Openswan 是 Linux 的 IPsec 实现。您需要配置 Openswan 和 IUT 相互认证的方式。
 - tcpdump (http://www.tcpdump.org/)
 
 
-VI. IMPORTANT FILES
+VI. 重要文件
 -------------------
-- fuzzer.py - this is the fuzz tester that listens for Openswan
-  messages and applies the fuzz operators
-- README - this file
-- ipsec_confs/ - this directory contains different Openswan
-  configuration files. Openswan can be started with different
-  configuration files in order to generate different message
-  sequences.
+- fuzzer.py - 这是一个模糊测试程序，用于侦听 Openswan 消息并应用模糊运算符
+- README - 这个文件
+- ipsec_confs/ - 该目录包含不同的 Openswan 配置文件。Openswan 可以使用不同的配置文件启动，以便生成不同的消息序列。
 
 
-VII. KNOWN PROBLEMS
+VII. 已知问题
 -------------------
-- The Scapy python library refuses to send some fuzzed messages and 
-  crashes the fuzz tester.
+- Scapy-python 库拒绝发送一些模糊消息，并使模糊测试程序崩溃。
 
 
-VIII. VERSION HISTORY
+VIII. 版本历史记录
 ---------------------
 - v0.1 (November 14th, 2011)
-  First public release
+  首次公开发布
 
 
-IX. CONTACT INFORMATION
+IX. 联系方式
 -----------------------
-For further information on how to use the IKE fuzz tester:
+有关如何使用 IKE 模糊测试仪的更多信息：
 
 Petar Tsankov
 Email: petar.tsankov@gmail.com
